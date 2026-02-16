@@ -13,4 +13,8 @@
 *.iex       
 *.sct       
 *.i        
-*.asm             
+*.asm     
+build/
+.eide/
+.vscode/
+.cmsis/
