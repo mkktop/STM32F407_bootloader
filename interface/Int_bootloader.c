@@ -171,7 +171,8 @@ void Int_bootloader_init(void)
     __HAL_UART_CLEAR_OREFLAG(&huart1);                                                          // 清除ORE标志(若在初始化之前产生ORE错误，可能会引发BUG，故需清除)
     __HAL_UART_CLEAR_IDLEFLAG(&huart1);                                                         // 清除IDLE标志
     HAL_UARTEx_ReceiveToIdle_IT(&huart1, bootloader_uart_rec_buffer, BOOTLOADER_UART_BUF_SIZE); // 使能接收中断
-    Int_erase_app1_flash();// 擦除应用程序A的flash
+    //Int_erase_app1_flash();// 擦除应用程序A的flash
+    Int_bootloader_jump_to_app();
 }
 
 
@@ -234,4 +235,48 @@ uint32_t get_flash_sector(uint32_t address)
     }
 
     return sector;
+}
+
+void Int_bootloader_jump_to_app(void)
+{
+    //校验
+    uint32_t app1_stack_ptr = *(uint32_t *)APPLICATION_ADDRESS;
+    uint32_t app1_reset_handler = *(uint32_t *)(APPLICATION_ADDRESS + 4);
+    //校验栈顶地址
+    if ((app1_stack_ptr & 0xffff0000)!=STACK_ADDRESS)
+    {
+        printf("app1_stack_ptr error:0x%08x\n",app1_stack_ptr);
+        return;
+    }
+    if ((app1_reset_handler < APPLICATION_ADDRESS) || (app1_reset_handler > APPLICATION_ADDRESS + APPLICATION_SIZE))
+    {
+        printf("app1_reset_handler error:0x%08x\n",app1_reset_handler);
+        return;
+    }
+    //注销bootloaer程序
+    //关闭中断
+    __disable_irq();
+    // 清除所有 NVIC 中断
+    for (uint8_t i = 0; i < 8; i++)
+    {
+        NVIC->ICER[i] = 0xFFFFFFFF;  // 禁用所有中断
+        NVIC->ICPR[i] = 0xFFFFFFFF;  // 清除所有挂起中断
+    }
+    //注销hal库
+    HAL_DeInit();
+    // 停止 SysTick
+    SysTick->CTRL = 0;
+    SysTick->LOAD = 0;
+    SysTick->VAL = 0;
+    //设置堆栈指针
+    __set_MSP(app1_stack_ptr);
+    __ISB();  // 指令同步屏障
+    //重定向中断向量表
+    SCB->VTOR = APPLICATION_ADDRESS;
+    __DSB();  // 数据同步屏障
+
+    //跳转至应用程序A
+    void (*app1_reset_handler_ptr)(void) = (void (*)(void))app1_reset_handler;//将应用程序A的重置处理函数地址转换为函数指针
+    __enable_irq();
+    app1_reset_handler_ptr();
 }
