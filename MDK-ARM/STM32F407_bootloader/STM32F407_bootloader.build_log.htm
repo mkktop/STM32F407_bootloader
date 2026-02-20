@@ -22,16 +22,29 @@ Dialog DLL:      TCM.DLL V1.56.4.0
  
 <h2>Project:</h2>
 C:\mkk\work\project\STM32F407_bootloader\MDK-ARM\STM32F407_bootloader.uvprojx
-Project File Date:  02/10/2026
+Project File Date:  02/19/2026
 
 <h2>Output:</h2>
 *** Using Compiler 'V5.06 update 7 (build 960)', folder: 'C:\mkk\work\keil\Keil_v5\ARM\arm5_compiler\Bin'
 Build target 'STM32F407_bootloader'
-compiling Int_bootloader.c...
+compiling app.c...
+..\app\app.h(9): warning:  #1-D: last line of file ends without a newline
+  #endif /* __APP_H__ */
+..\app\app.c(31): warning:  #223-D: function "printf" declared implicitly
+                  printf("KEY1 pressed, OTA flag set, system reset\n");
+..\app\app.c(35): warning:  #1-D: last line of file ends without a newline
+  }
+..\app\app.c(10): warning:  #550-D: variable "key_pressed"  was set but never used
+      uint8_t key_pressed = 0;
+..\app\app.c: 4 warnings, 0 errors
+compiling main.c...
+../app/app.h(9): warning:  #1-D: last line of file ends without a newline
+  #endif /* __APP_H__ */
+../Core/Src/main.c: 1 warning, 0 errors
 linking...
 Program Size: Code=9016 RO-data=448 RW-data=64 ZI-data=1608  
 FromELF: creating hex file...
-"STM32F407_bootloader\STM32F407_bootloader.axf" - 0 Error(s), 0 Warning(s).
+"STM32F407_bootloader\STM32F407_bootloader.axf" - 0 Error(s), 5 Warning(s).
 
 <h2>Software Packages used:</h2>
 
@@ -54,7 +67,7 @@ Package Vendor: Keil
 
    * Component: ARM::CMSIS:CORE:5.6.0
       Include file:  CMSIS/Core/Include/tz_context.h
-Build Time Elapsed:  00:00:02
+Build Time Elapsed:  00:00:01
 </pre>
 </body>
 </html>

@@ -1,12 +1,13 @@
 #include "Int_bootloader.h"
-
+#include "app.h"
 uint8_t bootloader_uart_rec_buffer[BOOTLOADER_UART_BUF_SIZE] = {0}; // 接收缓冲区
 uint16_t bootloader_uart_rec_len = 0;                               // 接收到的数据长度
-uint16_t rec_total_len = 0;                                         // 接收到的数据总长度
+uint32_t rec_total_len = 0;                                         // 接收到的数据总长度
 uint32_t flash_write_offset = 0;                                    // 写flash偏移量
 static uint8_t pending_byte = 0;                                    // 缓存的字节
 static uint8_t is_pending_byte = 0;                                 // 是否有缓存字节
-
+extern app_ota_state_t ota_state;
+uint32_t last_rec_time = 0;
 /// @brief 根据串口接收到的数据擦除flash
 static void Int_erase_flash()
 {
@@ -45,9 +46,9 @@ static void Int_erase_flash()
     }
 }
 
-static void Int_erase_app1_flash()
+void Int_erase_app1_flash()
 {
-        printf("start erase app1 flash\n");
+        //printf("start erase app1 flash\n");
         HAL_FLASH_Unlock();
         FLASH_EraseInitTypeDef erase_init_struct = {0};        // 用于配置Flash擦除操作的数据结构
         erase_init_struct.TypeErase = FLASH_TYPEERASE_SECTORS; // 扇区擦除
@@ -57,7 +58,7 @@ static void Int_erase_app1_flash()
         uint32_t sector_error = 0;
         HAL_FLASHEx_Erase(&erase_init_struct, &sector_error);
         HAL_FLASH_Lock();
-        printf("app1 flash erase done\n");
+        //printf("app1 flash erase done\n");
 }
 /// @brief 根据接收的数据写入flash
 static void Int_write_flash()
@@ -145,7 +146,7 @@ static void Int_write_flash()
  */
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
-    if (huart->Instance == USART1) // 判断是否为USART1
+    if (huart->Instance == USART1 && ota_state == APP_OTA_STATE_RUNNING) // 判断是否为USART1
     {
         bootloader_uart_rec_len = Size; // 更新接收到的数据长度
         // TODO: 处理接收到的数据
@@ -155,10 +156,10 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
         Int_write_flash();
         // 锁住flash
         HAL_FLASH_Lock();
-
         rec_total_len += bootloader_uart_rec_len;                                                   // 更新接收到的数据总长度
         //memset(bootloader_uart_rec_buffer, 0, BOOTLOADER_UART_BUF_SIZE);                            // 清空接收缓冲区
         HAL_UARTEx_ReceiveToIdle_IT(&huart1, bootloader_uart_rec_buffer, BOOTLOADER_UART_BUF_SIZE); // 使能接收中断
+        last_rec_time = HAL_GetTick();
     }
 }
 
@@ -171,8 +172,7 @@ void Int_bootloader_init(void)
     __HAL_UART_CLEAR_OREFLAG(&huart1);                                                          // 清除ORE标志(若在初始化之前产生ORE错误，可能会引发BUG，故需清除)
     __HAL_UART_CLEAR_IDLEFLAG(&huart1);                                                         // 清除IDLE标志
     HAL_UARTEx_ReceiveToIdle_IT(&huart1, bootloader_uart_rec_buffer, BOOTLOADER_UART_BUF_SIZE); // 使能接收中断
-    //Int_erase_app1_flash();// 擦除应用程序A的flash
-    Int_bootloader_jump_to_app();
+    //Int_bootloader_jump_to_app();
 }
 
 
